@@ -1,7 +1,10 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.groups.defaultByName
+import com.github.ajalt.clikt.parameters.groups.groupSwitch
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.restrictTo
@@ -28,7 +31,7 @@ class PixelSort : CliktCommand() {
 
     private val inputPath by argument().file(mustExist = true, canBeDir = false)
 
-    private val outputPath by option("-o", "--output-path")
+    private val outputPath by option("-o", "--output-path", help = "Default date-time.")
         .file(mustExist = false, canBeDir = false)
 
     private val angle by option("-a", "--angle", help = "Between 0 and 360. Default 0.")
@@ -36,15 +39,17 @@ class PixelSort : CliktCommand() {
         .restrictTo(range = 0.0..360.0)
         .default(value = 0.0)
 
-    private val lowerThreshold by option("-l", "--lower-threshold", help = "Between 0 and 1. Default 0.25.")
-        .double()
-        .restrictTo(range = 0.0..1.0)
-        .default(value = 0.25)
+    private val interval by option(help = "Interval function. Default '--lightness'.")
+        .groupSwitch(
+            "--lightness" to IntervalFunction.Lightness(),
+            "--random" to IntervalFunction.Random(),
+        ).defaultByName(name = "--lightness")
 
-    private val upperThreshold by option("-u", "--upper-threshold", help = "Between 0 and 1. Default 0.8.")
-        .double()
-        .restrictTo(range = 0.0..1.0)
-        .default(value = 0.8)
+    private val sortingFunction by option("-s", "--sorting-function", help = "Default lightness.")
+        .choice<Comparator<RGBColor>>(
+            "lightness" to comparing { it.toHSL().lightness },
+            "hue" to comparing { it.toHSL().hue },
+        ).default(comparing { it.toHSL().lightness })
 
     override fun run() = runBlocking {
         val input = ImmutableImage.loader().fromFile(inputPath)
@@ -68,7 +73,7 @@ class PixelSort : CliktCommand() {
     }
 
     private fun Array<Pixel>.sortPixels() =
-        fold(RowSorter { toHSL().lightness in lowerThreshold..upperThreshold }, RowSorter::insert).colors
+        fold(RowSorter(interval, sortingFunction), RowSorter::insert).colors
 
     private fun defaultOutputFile(): File {
         val fileName = "${
@@ -85,16 +90,17 @@ class PixelSort : CliktCommand() {
 
 fun main(args: Array<String>) = PixelSort().main(args)
 
-class RowSorter(private val shouldBeSorted: RGBColor.() -> Boolean) {
-
-    private val comparator = comparing<RGBColor, Float> { it.toHSL().lightness }
+class RowSorter(
+    private val intervalFunction: IntervalFunction,
+    private val comparator: Comparator<RGBColor>,
+) {
 
     val colors = mutableListOf<RGBColor>()
 
     private var fromIndex = 0
 
     fun insert(color: RGBColor) = also {
-        if (color.alpha != 0 && color.shouldBeSorted()) {
+        if (color.alpha != 0 && intervalFunction.shouldBeSorted(color)) {
             val index = colors.binarySearch(color, comparator, fromIndex)
             colors.add(if (index < 0) (-(index + 1)) else index, color)
         } else {
