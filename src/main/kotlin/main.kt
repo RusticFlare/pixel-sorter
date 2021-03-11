@@ -1,11 +1,12 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.options.defaultLazy
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import com.sksamuel.scrimage.ImmutableImage
+import com.sksamuel.scrimage.color.Colors
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.nio.JpegWriter
 import com.sksamuel.scrimage.pixels.Pixel
@@ -23,7 +24,6 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.system.measureTimeMillis
 
-
 class PixelSort : CliktCommand() {
 
     private val inputPath by argument().file(mustExist = true, canBeDir = false)
@@ -31,16 +31,24 @@ class PixelSort : CliktCommand() {
     private val outputPath by option("-o", "--output-path")
         .file(mustExist = false, canBeDir = false)
 
-    private val angle by option("-a", "--angle")
+    private val angle by option("-a", "--angle", help = "Between 0 and 360. Default 0.")
         .double()
         .restrictTo(range = 0.0..360.0)
-        .defaultLazy { 0.0 }
+        .default(value = 0.0)
+
+    private val lowerThreshold by option("-l", "--lower-threshold", help = "Between 0 and 1. Default 0.25.")
+        .double()
+        .restrictTo(range = 0.0..1.0)
+        .default(value = 0.25)
+
+    private val upperThreshold by option("-u", "--upper-threshold", help = "Between 0 and 1. Default 0.8.")
+        .double()
+        .restrictTo(range = 0.0..1.0)
+        .default(value = 0.8)
 
     override fun run() = runBlocking {
         val input = ImmutableImage.loader().fromFile(inputPath)
-        val output = input.rot(angle)
-
-        input.awt().createGraphics()
+        val output = input.rotateClockwise(degrees = angle)
 
         val buildTimeMillis = measureTimeMillis {
             val colors = output.rows()
@@ -52,25 +60,32 @@ class PixelSort : CliktCommand() {
         echo(message = "Build Image: ${buildTimeMillis}ms")
 
         val writeTimeMillis = measureTimeMillis {
-            output.rotInv(angle)
+            output.rotateAntiClockwise(degrees = angle)
                 .resizeTo(input.width, input.height)
-                .output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
+                .save()
         }
         echo(message = "Write Image: ${writeTimeMillis}ms")
     }
 
-    private fun Array<Pixel>.sortPixels() = fold(RowSorter(), RowSorter::insert).colors
+    private fun Array<Pixel>.sortPixels() =
+        fold(RowSorter { toHSL().lightness in lowerThreshold..upperThreshold }, RowSorter::insert).colors
 
     private fun defaultOutputFile(): File {
-        val fileName = "${now().format(ISO_LOCAL_DATE_TIME)}.jpeg"
+        val fileName = "${
+            now().format(ISO_LOCAL_DATE_TIME)
+                .replace(oldValue = ".", newValue = "")
+                .replace(oldValue = ":", newValue = "")
+        }.jpg"
         echo(message = "Output file is '$fileName'")
         return inputPath.resolveSibling(fileName)
     }
+
+    private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
 }
 
 fun main(args: Array<String>) = PixelSort().main(args)
 
-class RowSorter {
+class RowSorter(private val shouldBeSorted: RGBColor.() -> Boolean) {
 
     private val comparator = comparing<RGBColor, Float> { it.toHSL().lightness }
 
@@ -79,7 +94,7 @@ class RowSorter {
     private var fromIndex = 0
 
     fun insert(color: RGBColor) = also {
-        if (color.shouldBeSorted) {
+        if (color.alpha != 0 && color.shouldBeSorted()) {
             val index = colors.binarySearch(color, comparator, fromIndex)
             colors.add(if (index < 0) (-(index + 1)) else index, color)
         } else {
@@ -87,31 +102,24 @@ class RowSorter {
             fromIndex = colors.size
         }
     }
-
-    private val RGBColor.shouldBeSorted: Boolean
-        get() {
-            val lightness = toHSL().lightness
-            return 0.1 < lightness && lightness < 0.9
-        }
 }
 
 fun RowSorter.insert(pixel: Pixel) = insert(pixel.toColor())
 
 fun Int.squared() = toDouble().pow(2)
 
-fun ImmutableImage.rot(degrees: Double): ImmutableImage {
+fun ImmutableImage.rotateClockwise(degrees: Double): ImmutableImage {
     val size = sqrt(width.squared() + height.squared())
     val transform = AffineTransform().apply {
+        translate((size - width) / 2, (size - height) / 2)
         rotate(Math.toRadians(degrees), width / 2.0, height / 2.0)
     }
-    val target = BufferedImage(size.toInt(), size.toInt(), type)
-    val graphics = target.createGraphics()
-    graphics.translate((size - width) / 2, (size - height) / 2)
-    graphics.drawImage(awt(), transform, null)
+    val target = ImmutableImage.filled(size.toInt(), size.toInt(), Colors.Transparent.awt()).awt()
+    target.createGraphics().drawImage(awt(), transform, null)
     return ImmutableImage.wrapAwt(target, metadata)
 }
 
-fun ImmutableImage.rotInv(degrees: Double): ImmutableImage {
+fun ImmutableImage.rotateAntiClockwise(degrees: Double): ImmutableImage {
     val transform = AffineTransform().apply {
         rotate(Math.toRadians(-degrees), width / 2.0, height / 2.0)
     }
