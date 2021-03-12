@@ -39,21 +39,18 @@ class PixelSort : CliktCommand() {
         .restrictTo(range = 0.0..360.0)
         .default(value = 0.0)
 
-    private val intervalFunction by option(
-        "-i", "--interval-function",
-        help = "Interval function. Default lightness."
-    ).groupChoice(
-        "lightness" to IntervalFunction.Lightness(),
-        "random" to IntervalFunction.Random(),
-    ).defaultByName(name = "lightness")
+    private val intervalFunction by option("-i", "--interval-function", help = "Default lightness.")
+        .groupChoice(
+            "lightness" to IntervalFunction.Lightness(),
+            "random" to IntervalFunction.Random(),
+        ).defaultByName(name = "lightness")
 
-    private val sortingFunction by option(
-        "-s", "--sorting-function",
-        help = "Default lightness."
-    ).choice<Comparator<RGBColor>>(
-        "lightness" to comparing { it.toHSL().lightness },
-        "hue" to comparing { it.toHSL().hue },
-    ).default(comparing { it.toHSL().lightness })
+    private val sortingFunction by option("-s", "--sorting-function", help = "Default lightness.")
+        .choice<Comparator<RGBColor>>(
+            "lightness" to comparing { it.toHSL().lightness },
+            "hue" to comparing { it.toHSL().hue },
+            "saturation" to comparing { it.toHSL().saturation },
+        ).default(comparing { it.toHSL().lightness })
 
     override fun run() = runBlocking {
         val input = ImmutableImage.loader().fromFile(inputPath)
