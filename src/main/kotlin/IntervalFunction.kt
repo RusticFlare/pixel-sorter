@@ -33,4 +33,9 @@ sealed class IntervalFunction : OptionGroup() {
 
         override fun shouldBeSorted(color: RGBColor) = sort.also { if (random.nextInt(until = 600) == 1) sort = !sort }
     }
+
+    object None : IntervalFunction() {
+
+        override fun shouldBeSorted(color: RGBColor) = true
+    }
 }

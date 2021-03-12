@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.parameters.groups.defaultByName
 import com.github.ajalt.clikt.parameters.groups.groupChoice
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.restrictTo
@@ -22,8 +21,6 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.time.LocalDateTime.now
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
-import java.util.Comparator.comparing
-import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.system.measureTimeMillis
 
@@ -43,14 +40,16 @@ class PixelSort : CliktCommand() {
         .groupChoice(
             "lightness" to IntervalFunction.Lightness(),
             "random" to IntervalFunction.Random(),
+            "none" to IntervalFunction.None,
         ).defaultByName(name = "lightness")
 
     private val sortingFunction by option("-s", "--sorting-function", help = "Default lightness.")
-        .choice<Comparator<RGBColor>>(
-            "lightness" to comparing { it.toHSL().lightness },
-            "hue" to comparing { it.toHSL().hue },
-            "saturation" to comparing { it.toHSL().saturation },
-        ).default(comparing { it.toHSL().lightness })
+        .groupChoice(
+            "hue" to SortingFunction.HSL.Hue,
+            "saturation" to SortingFunction.HSL.Saturation,
+            "lightness" to SortingFunction.HSL.Lightness,
+            "intensity" to SortingFunction.RGB.Intensity,
+        ).defaultByName(name = "lightness")
 
     override fun run() = runBlocking {
         val input = ImmutableImage.loader().fromFile(inputPath)
@@ -93,27 +92,27 @@ fun main(args: Array<String>) = PixelSort().main(args)
 
 class RowSorter(
     private val intervalFunction: IntervalFunction,
-    private val comparator: Comparator<RGBColor>,
+    private val sortingFunction: SortingFunction,
 ) {
 
     val colors = mutableListOf<RGBColor>()
 
-    private var fromIndex = 0
+    private var indexSortedTo = 0
 
     fun insert(color: RGBColor) = also {
         if (color.alpha != 0 && intervalFunction.shouldBeSorted(color)) {
-            val index = colors.binarySearch(color, comparator, fromIndex)
+            val index = colors.binarySearch(color, sortingFunction.comparator, indexSortedTo)
             colors.add(if (index < 0) (-(index + 1)) else index, color)
         } else {
             colors.add(color)
-            fromIndex = colors.size
+            indexSortedTo = colors.size
         }
     }
 }
 
 fun RowSorter.insert(pixel: Pixel) = insert(pixel.toColor())
 
-fun Int.squared() = toDouble().pow(2)
+fun Int.squared() = (this * this).toDouble()
 
 fun ImmutableImage.rotateClockwise(degrees: Double): ImmutableImage {
     val size = sqrt(width.squared() + height.squared())
