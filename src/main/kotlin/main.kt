@@ -1,7 +1,7 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.groups.defaultByName
-import com.github.ajalt.clikt.parameters.groups.groupSwitch
+import com.github.ajalt.clikt.parameters.groups.groupChoice
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
@@ -39,17 +39,21 @@ class PixelSort : CliktCommand() {
         .restrictTo(range = 0.0..360.0)
         .default(value = 0.0)
 
-    private val interval by option(help = "Interval function. Default '--lightness'.")
-        .groupSwitch(
-            "--lightness" to IntervalFunction.Lightness(),
-            "--random" to IntervalFunction.Random(),
-        ).defaultByName(name = "--lightness")
+    private val intervalFunction by option(
+        "-i", "--interval-function",
+        help = "Interval function. Default lightness."
+    ).groupChoice(
+        "lightness" to IntervalFunction.Lightness(),
+        "random" to IntervalFunction.Random(),
+    ).defaultByName(name = "lightness")
 
-    private val sortingFunction by option("-s", "--sorting-function", help = "Default lightness.")
-        .choice<Comparator<RGBColor>>(
-            "lightness" to comparing { it.toHSL().lightness },
-            "hue" to comparing { it.toHSL().hue },
-        ).default(comparing { it.toHSL().lightness })
+    private val sortingFunction by option(
+        "-s", "--sorting-function",
+        help = "Default lightness."
+    ).choice<Comparator<RGBColor>>(
+        "lightness" to comparing { it.toHSL().lightness },
+        "hue" to comparing { it.toHSL().hue },
+    ).default(comparing { it.toHSL().lightness })
 
     override fun run() = runBlocking {
         val input = ImmutableImage.loader().fromFile(inputPath)
@@ -73,7 +77,7 @@ class PixelSort : CliktCommand() {
     }
 
     private fun Array<Pixel>.sortPixels() =
-        fold(RowSorter(interval, sortingFunction), RowSorter::insert).colors
+        fold(RowSorter(intervalFunction, sortingFunction), RowSorter::insert).colors
 
     private fun defaultOutputFile(): File {
         val fileName = "${
