@@ -31,6 +31,9 @@ class PixelSort : CliktCommand() {
     private val outputPath by option("-o", "--output-path", help = "Default date-time.")
         .file(mustExist = false, canBeDir = false)
 
+    private val maskPath by option("-m", "--mask-path")
+        .file(mustExist = true, canBeDir = false)
+
     private val angle by option("-a", "--angle", help = "Between 0 and 360. Default 0.")
         .double()
         .restrictTo(range = 0.0..360.0)
@@ -51,8 +54,10 @@ class PixelSort : CliktCommand() {
             "intensity" to SortingFunction.RGB.Intensity,
         ).defaultByName(name = "lightness")
 
+    private val finalIntervalFunction by lazy { mask(intervalFunction) }
+
     override fun run() = runBlocking {
-        val input = ImmutableImage.loader().fromFile(inputPath)
+        val input = inputPath.immutableImage()
         val output = input.rotateClockwise(degrees = angle)
 
         val buildTimeMillis = measureTimeMillis {
@@ -73,7 +78,7 @@ class PixelSort : CliktCommand() {
     }
 
     private fun Array<Pixel>.sortPixels() =
-        fold(RowSorter(intervalFunction, sortingFunction), RowSorter::insert).colors
+        fold(RowSorter(finalIntervalFunction, sortingFunction), RowSorter::insert).colors
 
     private fun defaultOutputFile(): File {
         val fileName = "${
@@ -86,6 +91,10 @@ class PixelSort : CliktCommand() {
     }
 
     private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
+
+    private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateClockwise(angle)
+        ?.let { IntervalFunction.Mask(intervalFunction, it) }
+        ?: intervalFunction
 }
 
 fun main(args: Array<String>) = PixelSort().main(args)
@@ -99,8 +108,9 @@ class RowSorter(
 
     private var indexSortedTo = 0
 
-    fun insert(color: RGBColor) = also {
-        if (color.alpha != 0 && intervalFunction.shouldBeSorted(color)) {
+    fun insert(pixel: Pixel) = also {
+        val color = pixel.toColor()
+        if (color.alpha != 0 && intervalFunction.shouldBeSorted(pixel)) {
             val index = colors.binarySearch(color, sortingFunction.comparator, indexSortedTo)
             colors.add(if (index < 0) (-(index + 1)) else index, color)
         } else {
@@ -109,8 +119,6 @@ class RowSorter(
         }
     }
 }
-
-fun RowSorter.insert(pixel: Pixel) = insert(pixel.toColor())
 
 fun Int.squared() = (this * this).toDouble()
 
@@ -134,3 +142,5 @@ fun ImmutableImage.rotateAntiClockwise(degrees: Double): ImmutableImage {
     graphics.drawImage(awt(), transform, null)
     return ImmutableImage.wrapAwt(target, metadata)
 }
+
+private fun File.immutableImage() = ImmutableImage.loader().fromFile(this)
