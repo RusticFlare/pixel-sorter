@@ -6,7 +6,6 @@ plugins {
 }
 
 group = "com.github.rusticflare"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
