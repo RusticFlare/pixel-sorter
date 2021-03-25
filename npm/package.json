@@ -1,0 +1,25 @@
+{
+  "bin": {
+    "pixel-sorter": "jdeploy-bundle/jdeploy.js"
+  },
+  "author": "rusticflare <j_d_baker@hotmail.com>",
+  "description": "A command line app for pixel sorting images",
+  "main": "index.js",
+  "preferGlobal": true,
+  "repository": "github:RusticFlare/pixel-sorter",
+  "version": "1.0.0",
+  "jdeploy": {
+    "jar": "pixel-sorter.jar"
+  },
+  "dependencies": {
+    "shelljs": "^0.7.5"
+  },
+  "license": "ISC",
+  "name": "@rusticflare/pixel-sorter",
+  "files": [
+    "jdeploy-bundle"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
