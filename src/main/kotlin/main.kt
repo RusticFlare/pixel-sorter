@@ -28,7 +28,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 @ExperimentalTime
-object PixelSort : CliktCommand(printHelpOnEmptyArgs = true) {
+object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
 
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
@@ -119,7 +119,7 @@ object PixelSort : CliktCommand(printHelpOnEmptyArgs = true) {
 }
 
 @ExperimentalTime
-fun main(args: Array<String>) = PixelSort.main(args)
+fun main(args: Array<String>) = PixelSorter.main(args)
 
 class RowSorter(
     private val intervalFunction: IntervalFunction,
