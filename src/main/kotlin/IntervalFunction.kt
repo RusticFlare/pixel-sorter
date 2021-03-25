@@ -11,16 +11,22 @@ import kotlin.random.Random
 
 sealed class IntervalFunction : OptionGroup() {
 
+    val name: String
+        get() = this::class.simpleName!!.toLowerCase()
+
+    val choice: Pair<String, IntervalFunction>
+        get() = name to this
+
     abstract fun shouldBeSorted(pixel: Pixel): Boolean
 
-    class Lightness : IntervalFunction() {
+    object Lightness : IntervalFunction() {
 
-        private val lowerThreshold by option("-l", "--lower-threshold", help = "Between 0 and 1. Default 0.25.")
+        private val lowerThreshold by option("-l", "--lower-threshold", help = "Between 0 and 1")
             .double()
             .restrictTo(range = 0.0..1.0)
             .default(value = 0.25)
 
-        private val upperThreshold by option("-u", "--upper-threshold", help = "Between 0 and 1. Default 0.8.")
+        private val upperThreshold by option("-u", "--upper-threshold", help = "Between 0 and 1")
             .double()
             .restrictTo(range = 0.0..1.0)
             .default(value = 0.8)
@@ -28,7 +34,7 @@ sealed class IntervalFunction : OptionGroup() {
         override fun shouldBeSorted(pixel: Pixel) = pixel.toColor().toHSL().lightness in lowerThreshold..upperThreshold
     }
 
-    class Random : IntervalFunction() {
+    object Random : IntervalFunction() {
 
         private val random = Random(0)
 

@@ -5,6 +5,12 @@ import java.util.Comparator.comparing
 
 sealed class SortingFunction(val comparator: Comparator<RGBColor>) : OptionGroup() {
 
+    val name: String
+        get() = this::class.simpleName!!.toLowerCase()
+
+    val choice: Pair<String, SortingFunction>
+        get() = name to this
+
     sealed class HSL(private val fieldToCompare: HSLColor.() -> Float) :
         SortingFunction(comparing { it.toHSL().fieldToCompare() }) {
 

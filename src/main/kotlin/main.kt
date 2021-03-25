@@ -1,4 +1,6 @@
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.groups.defaultByName
 import com.github.ajalt.clikt.parameters.groups.groupChoice
@@ -22,37 +24,52 @@ import java.io.File
 import java.time.LocalDateTime.now
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import kotlin.math.sqrt
-import kotlin.system.measureTimeMillis
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
-class PixelSort : CliktCommand() {
+@ExperimentalTime
+object PixelSort : CliktCommand(printHelpOnEmptyArgs = true) {
+
+    init {
+        context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
+    }
 
     private val inputPath by argument().file(mustExist = true, canBeDir = false)
 
-    private val outputPath by option("-o", "--output-path", help = "Default date-time.")
+    private val outputPath by option("-o", "--output-path", help = "(default: DATE-TIME.jpg)")
         .file(mustExist = false, canBeDir = false)
 
-    private val maskPath by option("-m", "--mask-path")
-        .file(mustExist = true, canBeDir = false)
+    private val maskPath by option(
+        "-m",
+        "--mask-path",
+        help = "Path to a mask with the same dimensions as INPUTPATH - only the white portions will be sorted"
+    ).file(mustExist = true, canBeDir = false)
 
-    private val angle by option("-a", "--angle", help = "Between 0 and 360. Default 0.")
+    private val angle by option("-a", "--angle", help = "Between 0 and 360")
         .double()
         .restrictTo(range = 0.0..360.0)
         .default(value = 0.0)
 
-    private val intervalFunction by option("-i", "--interval-function", help = "Default lightness.")
-        .groupChoice(
-            "lightness" to IntervalFunction.Lightness(),
-            "random" to IntervalFunction.Random(),
-            "none" to IntervalFunction.None,
-        ).defaultByName(name = "lightness")
+    private val intervalFunction by option(
+        "-i",
+        "--interval-function",
+        help = "(default: ${IntervalFunction.Lightness.name})"
+    ).groupChoice(
+        IntervalFunction.Lightness.choice,
+        IntervalFunction.Random.choice,
+        IntervalFunction.None.choice,
+    ).defaultByName(name = IntervalFunction.Lightness.name)
 
-    private val sortingFunction by option("-s", "--sorting-function", help = "Default lightness.")
-        .groupChoice(
-            "hue" to SortingFunction.HSL.Hue,
-            "saturation" to SortingFunction.HSL.Saturation,
-            "lightness" to SortingFunction.HSL.Lightness,
-            "intensity" to SortingFunction.RGB.Intensity,
-        ).defaultByName(name = "lightness")
+    private val sortingFunction by option(
+        "-s",
+        "--sorting-function",
+        help = "(default: ${SortingFunction.HSL.Lightness.name})"
+    ).groupChoice(
+        SortingFunction.HSL.Hue.choice,
+        SortingFunction.HSL.Saturation.choice,
+        SortingFunction.HSL.Lightness.choice,
+        SortingFunction.RGB.Intensity.choice,
+    ).defaultByName(name = SortingFunction.HSL.Lightness.name)
 
     private val finalIntervalFunction by lazy { mask(intervalFunction) }
 
@@ -60,25 +77,31 @@ class PixelSort : CliktCommand() {
         val input = inputPath.immutableImage()
         val output = input.rotateClockwise(degrees = angle)
 
-        val buildTimeMillis = measureTimeMillis {
-            val colors = output.rows()
-                .map { GlobalScope.async { it.sortPixels().map { it.awt() } } }
-                .awaitAll()
+        echo(message = "Sorting pixels")
+        val sortTimeMillis = measureTime { output.sortPixels() }
+        echo(message = "Sorted pixels in $sortTimeMillis")
 
-            output.mapInPlace { colors[it.y][it.x] }
-        }
-        echo(message = "Build Image: ${buildTimeMillis}ms")
-
-        val writeTimeMillis = measureTimeMillis {
+        echo(message = "Saving image")
+        val saveDuration = measureTime {
             output.rotateAntiClockwise(degrees = angle)
                 .resizeTo(input.width, input.height)
                 .save()
         }
-        echo(message = "Write Image: ${writeTimeMillis}ms")
+        echo(message = "Saved in $saveDuration")
+    }
+
+    private suspend fun ImmutableImage.sortPixels() {
+        val colors = rows()
+            .map { GlobalScope.async { it.sortPixels().map { it.awt() } } }
+            .awaitAll()
+
+        mapInPlace { colors[it.y][it.x] }
     }
 
     private fun Array<Pixel>.sortPixels() =
         fold(RowSorter(finalIntervalFunction, sortingFunction), RowSorter::insert).colors
+
+    private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
 
     private fun defaultOutputFile(): File {
         val fileName = "${
@@ -90,14 +113,13 @@ class PixelSort : CliktCommand() {
         return inputPath.resolveSibling(fileName)
     }
 
-    private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
-
     private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateClockwise(angle)
         ?.let { IntervalFunction.Mask(intervalFunction, it) }
         ?: intervalFunction
 }
 
-fun main(args: Array<String>) = PixelSort().main(args)
+@ExperimentalTime
+fun main(args: Array<String>) = PixelSort.main(args)
 
 class RowSorter(
     private val intervalFunction: IntervalFunction,
