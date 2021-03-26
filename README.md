@@ -11,3 +11,9 @@ A command line app for pixel sorting images
     ```shell
     npm i -g @rusticflare/pixel-sorter
     ```
+
+## Updating
+
+```shell
+npm up -g @rusticflare/pixel-sorter
+```
