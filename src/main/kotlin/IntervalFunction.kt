@@ -2,6 +2,7 @@ import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
@@ -36,11 +37,23 @@ sealed class IntervalFunction : OptionGroup() {
 
     object Random : IntervalFunction() {
 
-        private val random = Random(0)
+        private val random = Random(seed = 0)
 
         private var sort = true
 
-        override fun shouldBeSorted(pixel: Pixel) = sort.also { if (random.nextInt(until = 600) == 1) sort = !sort }
+        private val averageWidth by option(
+            "-w",
+            "--average-width",
+            help = "The average pixel width of the random sections"
+        ).int()
+            .restrictTo(1..Int.MAX_VALUE)
+            .default(400)
+
+        override fun shouldBeSorted(pixel: Pixel) = sort.also {
+            if (random.nextInt(until = averageWidth) == 0) {
+                sort = !sort
+            }
+        }
     }
 
     object None : IntervalFunction() {
