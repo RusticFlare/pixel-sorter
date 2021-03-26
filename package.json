@@ -19,7 +19,7 @@
   "dependencies": {
     "shelljs": "^0.8.4"
   },
-  "license": "ISC",
+  "license": "Unlicense",
   "name": "@rusticflare/pixel-sorter",
   "files": [
     "jdeploy-bundle"
