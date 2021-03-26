@@ -38,3 +38,13 @@ tasks.withType<Jar> {
     }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
 }
+
+tasks.register<Copy>("packageForNpm") {
+    dependsOn(tasks.build)
+    from("$buildDir/libs/pixel-sorter.jar", "README.md", "package.json")
+    into("$buildDir/npm")
+}
+
+tasks.build {
+    finalizedBy("packageForNpm")
+}
