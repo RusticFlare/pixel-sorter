@@ -8,6 +8,11 @@
   "preferGlobal": true,
   "repository": "github:RusticFlare/pixel-sorter",
   "version": "1.0.2",
+  "keywords": [
+    "cli",
+    "command",
+    "art"
+  ],
   "jdeploy": {
     "jar": "pixel-sorter.jar"
   },
