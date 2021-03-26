@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.4.31"
-    application
 }
 
 group = "com.github.rusticflare"
@@ -26,10 +25,6 @@ tasks.test {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
-}
-
-application {
-    mainClassName = "MainKt"
 }
 
 tasks.withType<Jar> {
