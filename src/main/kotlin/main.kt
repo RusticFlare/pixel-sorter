@@ -21,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.io.File
+import java.lang.Math.toRadians
 import java.time.LocalDateTime.now
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import kotlin.math.sqrt
@@ -28,7 +29,11 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 @ExperimentalTime
-object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
+object PixelSorter : CliktCommand(
+    help = "For detailed help see github.com/RusticFlare/pixel-sorter",
+    epilog = "If you find this useful please consider buying me a coffee @ ko-fi.com/jamesbaker",
+    printHelpOnEmptyArgs = true,
+) {
 
     init {
         context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
@@ -42,7 +47,7 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
     private val maskPath by option(
         "-m",
         "--mask-path",
-        help = "Path to a mask with the same dimensions as INPUTPATH - only the white portions will be sorted"
+        help = "Path to a mask with the same dimensions as INPUTPATH - only the white portions will be sorted",
     ).file(mustExist = true, canBeDir = false)
 
     private val angle by option("-a", "--angle", help = "Between 0 and 360")
@@ -53,7 +58,7 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
     private val intervalFunction by option(
         "-i",
         "--interval-function",
-        help = "(default: ${IntervalFunction.Lightness.name})"
+        help = "(default: ${IntervalFunction.Lightness.name})",
     ).groupChoice(
         IntervalFunction.Lightness.choice,
         IntervalFunction.Random.choice,
@@ -63,7 +68,7 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
     private val sortingFunction by option(
         "-s",
         "--sorting-function",
-        help = "(default: ${SortingFunction.HSL.Lightness.name})"
+        help = "(default: ${SortingFunction.HSL.Lightness.name})",
     ).groupChoice(
         SortingFunction.HSL.Hue.choice,
         SortingFunction.HSL.Saturation.choice,
@@ -75,7 +80,7 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
 
     override fun run() = runBlocking {
         val input = inputPath.immutableImage()
-        val output = input.rotateClockwise(degrees = angle)
+        val output = input.rotateAntiClockwise(degrees = angle)
 
         echo(message = "Sorting pixels")
         val sortTimeMillis = measureTime { output.sortPixels() }
@@ -83,23 +88,23 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
 
         echo(message = "Saving image")
         val saveDuration = measureTime {
-            output.rotateAntiClockwise(degrees = angle)
-                .resizeTo(input.width, input.height)
+            output.rotateClockwise(degrees = angle)
+                .resizeTo(input.width - 2, input.height - 2)
                 .save()
         }
         echo(message = "Saved in $saveDuration")
     }
 
     private suspend fun ImmutableImage.sortPixels() {
-        val colors = rows()
+        val colors = columns()
             .map { GlobalScope.async { it.sortPixels().map { it.awt() } } }
             .awaitAll()
 
-        mapInPlace { colors[it.y][it.x] }
+        mapInPlace { colors[it.x][it.y] }
     }
 
-    private fun Array<Pixel>.sortPixels() =
-        fold(RowSorter(finalIntervalFunction, sortingFunction), RowSorter::insert).colors
+    private fun Sequence<Pixel>.sortPixels() =
+        fold(PixelSequenceSorter(finalIntervalFunction, sortingFunction), PixelSequenceSorter::insert).colors
 
     private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
 
@@ -113,15 +118,18 @@ object PixelSorter : CliktCommand(printHelpOnEmptyArgs = true) {
         return inputPath.resolveSibling(fileName)
     }
 
-    private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateClockwise(angle)
+    private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateAntiClockwise(angle)
         ?.let { IntervalFunction.Mask(intervalFunction, it) }
         ?: intervalFunction
 }
 
+private fun ImmutableImage.columns() =
+    (0 until width).map { x -> (0 until height).asSequence().map { y -> pixel(x, y) } }
+
 @ExperimentalTime
 fun main(args: Array<String>) = PixelSorter.main(args)
 
-class RowSorter(
+class PixelSequenceSorter(
     private val intervalFunction: IntervalFunction,
     private val sortingFunction: SortingFunction,
 ) {
@@ -144,24 +152,23 @@ class RowSorter(
 
 fun Int.squared() = (this * this).toDouble()
 
-fun ImmutableImage.rotateClockwise(degrees: Double): ImmutableImage {
+fun ImmutableImage.rotateAntiClockwise(degrees: Double): ImmutableImage {
     val size = sqrt(width.squared() + height.squared())
     val transform = AffineTransform().apply {
         translate((size - width) / 2, (size - height) / 2)
-        rotate(Math.toRadians(degrees), width / 2.0, height / 2.0)
+        rotate(toRadians(-degrees), width / 2.0, height / 2.0)
     }
     val target = ImmutableImage.filled(size.toInt(), size.toInt(), Colors.Transparent.awt()).awt()
     target.createGraphics().drawImage(awt(), transform, null)
     return ImmutableImage.wrapAwt(target, metadata)
 }
 
-fun ImmutableImage.rotateAntiClockwise(degrees: Double): ImmutableImage {
+fun ImmutableImage.rotateClockwise(degrees: Double): ImmutableImage {
     val transform = AffineTransform().apply {
-        rotate(Math.toRadians(-degrees), width / 2.0, height / 2.0)
+        rotate(toRadians(degrees), width / 2.0, height / 2.0)
     }
     val target = BufferedImage(width, height, type)
-    val graphics = target.createGraphics()
-    graphics.drawImage(awt(), transform, null)
+    target.createGraphics().drawImage(awt(), transform, null)
     return ImmutableImage.wrapAwt(target, metadata)
 }
 

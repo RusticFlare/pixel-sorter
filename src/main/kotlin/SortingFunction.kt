@@ -3,7 +3,9 @@ import com.sksamuel.scrimage.color.HSLColor
 import com.sksamuel.scrimage.color.RGBColor
 import java.util.Comparator.comparing
 
-sealed class SortingFunction(val comparator: Comparator<RGBColor>) : OptionGroup() {
+sealed class SortingFunction(comparator: Comparator<RGBColor>) : OptionGroup() {
+
+    val comparator: Comparator<RGBColor> = comparator.reversed()
 
     val name: String
         get() = this::class.simpleName!!.toLowerCase()
