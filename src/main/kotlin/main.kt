@@ -30,10 +30,12 @@ import kotlin.time.measureTime
 
 private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
 
+private const val KO_FI = "ko-fi.com/jamesbaker"
+
 @ExperimentalTime
 object PixelSorter : CliktCommand(
     help = "For detailed help see github.com/RusticFlare/pixel-sorter",
-    epilog = "If you find this useful please consider buying me a coffee @ ko-fi.com/jamesbaker",
+    epilog = "If you find this useful please consider buying me a coffee @ $KO_FI",
     printHelpOnEmptyArgs = true,
 ) {
 
@@ -104,6 +106,7 @@ object PixelSorter : CliktCommand(
                 .save()
         }
         echo(message = "Saved in $saveDuration")
+        echo(message = "Buy me a coffee @ $KO_FI")
     }
 
     private suspend fun ImmutableImage.sortPixels() {
