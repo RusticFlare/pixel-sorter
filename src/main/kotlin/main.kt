@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.groups.defaultByName
 import com.github.ajalt.clikt.parameters.groups.groupChoice
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
@@ -12,7 +13,6 @@ import com.github.ajalt.clikt.parameters.types.restrictTo
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.Colors
 import com.sksamuel.scrimage.color.RGBColor
-import com.sksamuel.scrimage.nio.JpegWriter
 import com.sksamuel.scrimage.pixels.Pixel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -23,10 +23,12 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.lang.Math.toRadians
 import java.time.LocalDateTime.now
-import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+import java.time.format.DateTimeFormatter
 import kotlin.math.sqrt
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
+
+private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
 
 @ExperimentalTime
 object PixelSorter : CliktCommand(
@@ -41,8 +43,8 @@ object PixelSorter : CliktCommand(
 
     private val inputPath by argument().file(mustExist = true, canBeDir = false)
 
-    private val outputPath by option("-o", "--output-path", help = "(default: DATE-TIME.jpg)")
-        .file(mustExist = false, canBeDir = false)
+    private val outputFilename by option("-o", "--output-filename", help = "(default: DATE-TIME)")
+        .defaultLazy { now().format(dateFormat) }
 
     private val maskPath by option(
         "-m",
@@ -76,6 +78,15 @@ object PixelSorter : CliktCommand(
         SortingFunction.RGB.Intensity.choice,
     ).defaultByName(name = SortingFunction.HSL.Lightness.name)
 
+    private val outputFiletype by option(
+        "-f",
+        "--output-filetype",
+        help = "(default: ${Filetype.Jpg.name})",
+    ).groupChoice(
+        Filetype.Jpg.choice,
+        Filetype.Png.choice,
+    ).defaultByName(name = Filetype.Jpg.name)
+
     private val finalIntervalFunction by lazy { mask(intervalFunction) }
 
     override fun run() = runBlocking {
@@ -106,16 +117,10 @@ object PixelSorter : CliktCommand(
     private fun Sequence<Pixel>.sortPixels() =
         fold(PixelSequenceSorter(finalIntervalFunction, sortingFunction), PixelSequenceSorter::insert).colors
 
-    private fun ImmutableImage.save() = output(JpegWriter.NoCompression, outputPath ?: defaultOutputFile())
-
-    private fun defaultOutputFile(): File {
-        val fileName = "${
-            now().format(ISO_LOCAL_DATE_TIME)
-                .replace(oldValue = ".", newValue = "")
-                .replace(oldValue = ":", newValue = "")
-        }.jpg"
-        echo(message = "Output file is '$fileName'")
-        return inputPath.resolveSibling(fileName)
+    private fun ImmutableImage.save(): File? {
+        val filename = "$outputFilename.${outputFiletype.extension}"
+        echo(message = "Filename: $filename")
+        return output(outputFiletype.writer, inputPath.resolveSibling(relative = filename))
     }
 
     private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateAntiClockwise(angle)
