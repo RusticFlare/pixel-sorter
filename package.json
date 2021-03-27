@@ -7,7 +7,7 @@
   "main": "index.js",
   "preferGlobal": true,
   "repository": "github:RusticFlare/pixel-sorter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "keywords": [
     "cli",
     "command",
