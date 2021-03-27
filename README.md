@@ -6,6 +6,8 @@
 
 A command line app for pixel sorting images
 
+_Inspired by [satyarth/pixelsort](https://github.com/satyarth/pixelsort/)_
+
 ## Installation
 
 1. [Install NPM](https://www.npmjs.com/get-npm)
