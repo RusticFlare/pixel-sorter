@@ -61,20 +61,20 @@ _See [Examples](#examples) for how to use these_
 |`-f`|[A filetype](#filetypes)|The filetype to output|`jpg`|
 |`-h`|N/A|Print the help message|N/A|
 
-### Interval Functions
+#### Interval Functions
 
 - `lightness` - pixels with a `lightness` between the `-l` and `-u` values are sorted
 - `random` - random sections of average width `-w` are sorted
 - `none` - everything is sorted
 
-### Sorting Functions
+#### Sorting Functions
 
 - `hue`
 - `saturation`
 - `lightness`
 - `intensity`
 
-### Filetypes
+#### Filetypes
 
 - `jpg`
 - `png`
