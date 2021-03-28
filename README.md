@@ -143,6 +143,8 @@ pixel-sorter example.jpg -m example-mask.jpg -a 135 -i random
 
 ## Updating
 
+To update to the latest version
+
 ```shell
 npm up -g @rusticflare/pixel-sorter
 ```
