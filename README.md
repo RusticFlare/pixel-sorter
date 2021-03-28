@@ -6,15 +6,22 @@
 
 A command line app for pixel sorting images
 
+If you need help, find bugs, or want a new feature: please [raise an issue](https://github.com/RusticFlare/pixel-sorter/issues/new)
+
 _Inspired by [satyarth/pixelsort](https://github.com/satyarth/pixelsort/)_
 
 ## Installation
 
-1. [Install NPM](https://www.npmjs.com/get-npm)
-1. Install `pixel-sorter`
-    ```shell
-    npm i -g @rusticflare/pixel-sorter
-    ```
+### Prerequisites
+
+npm
+  - [Install npm](https://www.npmjs.com/get-npm). 
+  - You are downloading the command line client that lets you install `pixel-sorter` from the npm repository
+
+### Install `pixel-sorter`
+```shell
+npm i -g @rusticflare/pixel-sorter
+```
 
 ## Usage
 
