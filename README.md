@@ -3,12 +3,13 @@
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5P542WTU)
 
 [![npm](https://img.shields.io/npm/v/@rusticflare/pixel-sorter)](https://www.npmjs.com/package/@rusticflare/pixel-sorter)
-[![GitHub](https://img.shields.io/github/license/RusticFlare/pixel-sorter)](LICENSE)
+[![GitHub](https://img.shields.io/github/license/RusticFlare/pixel-sorter)](LICENSE.md)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/RusticFlare?style=social)](https://github.com/sponsors/RusticFlare)
 
 A command line app for pixel sorting images
 
-If you need help, find bugs, or want a new feature: please [raise an issue](https://github.com/RusticFlare/pixel-sorter/issues/new)
+If you need help, find bugs, or want a new feature:
+please [raise an issue](https://github.com/RusticFlare/pixel-sorter/issues/new)
 
 _Inspired by [satyarth/pixelsort](https://github.com/satyarth/pixelsort/)_
 
@@ -17,10 +18,12 @@ _Inspired by [satyarth/pixelsort](https://github.com/satyarth/pixelsort/)_
 ### Prerequisites
 
 npm
-  - [Install npm](https://www.npmjs.com/get-npm). 
-  - You are downloading the command line client that lets you install `pixel-sorter` from the npm repository
+
+- [Install npm](https://www.npmjs.com/get-npm).
+- You are downloading the command line client that lets you install `pixel-sorter` from the npm repository
 
 ### Install `pixel-sorter`
+
 ```shell
 npm i -g @rusticflare/pixel-sorter
 ```
