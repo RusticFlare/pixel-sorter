@@ -66,19 +66,22 @@ _See [Examples](#examples) for how to use these_
 |---|---|---|---|
 |`-o`|Text|The name of the output file (e.g. `sorted`)|The current date and time|
 |`-m`|File|The path to "mask" file|N/A|
+|`-f`|File|The path to a file to be used by the `randomfile` interval function|N/A|
 |`-a`|A number in `0.0`-`360.0`|The angle to sort along (as degrees on a compass)|`0.0`|
 |`-i`|[An interval function](#interval-functions)|The interval function to use|`lightness`|
 |`-l`|A number in `0.0`-`1.0`|The darkest `lightness` to include in sorted sections (used when the interval function is `lightness`)|`0.25`|
 |`-u`|A number in `0.0`-`1.0`|The brightest `lightness` to include in sorted sections (used when the interval function is `lightness`)|`0.8`|
-|`-w`|A positive whole number|The average width (in pixels) of the `random` sorted sections (used when the interval function is `random`)|`400`|
+|`-w`|A positive whole number|The average width (in pixels) of the `random[file]` sorted sections (used when the interval function is `random[file]`)|`400`|
 |`-s`|[A sorting function](#sorting-functions)|The sorting function to use|`lightness`|
-|`-f`|[A filetype](#filetypes)|The filetype to output|`jpg`|
+|`-e`|[A filetype](#filetypes)|The extension of the filetype to output|`jpg`|
 |`-h`|N/A|Print the help message|N/A|
 
 #### Interval Functions
 
 - `lightness` - pixels with a `lightness` between the `-l` and `-u` values are sorted
 - `random` - random sections of average width `-w` are sorted
+- `randomfile` - the brighter a pixel in a file provided by `-f` makes a pixel more likely to be sorted (use `-w` to
+  control the average width)
 - `none` - everything is sorted
 
 #### Sorting Functions
@@ -96,6 +99,7 @@ _See [Examples](#examples) for how to use these_
 ## Examples
 
 `example.jpg`:
+
 ![](examples/example.jpg)
 
 ### Default
@@ -145,6 +149,20 @@ pixel-sorter example.jpg -m example-mask.jpg -a 135 -i random
 ```
 
 ![](examples/example-sorted-mask.jpg)
+
+### Random File
+
+The brighter the pixel in `-f` the more likely the corresponding pixel is to be sorted.
+
+`example-randomfile-mask.jpg`:
+
+![](examples/example-randomfile-mask.jpg)
+
+```shell
+pixel-sorter example.jpg -i randomfile -f example-randomfile-mask.jpg
+```
+
+![](examples/example-randomfile.jpg)
 
 ## Updating
 
