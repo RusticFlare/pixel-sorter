@@ -1,8 +1,9 @@
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.double
-import com.github.ajalt.clikt.parameters.types.int
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
@@ -41,19 +42,38 @@ sealed class IntervalFunction : OptionGroup() {
 
         private var sort = true
 
-        private val averageWidth by option(
-            "-w",
-            "--average-width",
-            help = "The average pixel width of the random sections"
-        ).int()
-            .restrictTo(1..Int.MAX_VALUE)
-            .default(400)
-
         override fun shouldBeSorted(pixel: Pixel) = sort.also {
-            if (random.nextInt(until = averageWidth) == 0) {
+            if (random.nextInt(until = PixelSorter.averageWidth) == 0) {
                 sort = !sort
             }
         }
+    }
+
+    object RandomFile : IntervalFunction() {
+
+        private val random = Random(seed = 0)
+
+        private var sort = true
+
+        private val randomFile by option(
+            "-f",
+            "--file",
+            help = "A file where the brighter the pixel, the more likely it is to be sorted (use with 'randomfile')"
+        ).file(mustExist = true, canBeDir = false).required()
+
+        private val randomImage by lazy { randomFile.immutableImage().rotateAntiClockwise(PixelSorter.angle) }
+
+        override fun shouldBeSorted(pixel: Pixel) = when (val grey = randomImage.getGrey(pixel.x, pixel.y)) {
+            0 -> false
+            255 -> true
+            else -> sort.also {
+                if (random.nextInt(until = PixelSorter.averageWidth) == 0) {
+                    sort = random.nextInt(until = 256) < grey
+                }
+            }
+        }
+
+        private fun ImmutableImage.getGrey(x: Int, y: Int) = color(x, y).toGrayscale().gray
     }
 
     object None : IntervalFunction() {

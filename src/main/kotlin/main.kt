@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.Colors
@@ -25,14 +26,13 @@ import java.lang.Math.toRadians
 import java.time.LocalDateTime.now
 import java.time.format.DateTimeFormatter
 import kotlin.math.sqrt
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
 
 private const val KO_FI = "ko-fi.com/jamesbaker"
 
-@ExperimentalTime
+
 object PixelSorter : CliktCommand(
     help = "For detailed help see github.com/RusticFlare/pixel-sorter",
     epilog = "If you find this useful please consider buying me a coffee @ $KO_FI",
@@ -54,10 +54,18 @@ object PixelSorter : CliktCommand(
         help = "Path to a mask with the same dimensions as INPUTPATH - only the white portions will be sorted",
     ).file(mustExist = true, canBeDir = false)
 
-    private val angle by option("-a", "--angle", help = "Between 0 and 360")
+    internal val angle by option("-a", "--angle", help = "Between 0 and 360")
         .double()
         .restrictTo(range = 0.0..360.0)
         .default(value = 0.0)
+
+    internal val averageWidth by option(
+        "-w",
+        "--average-width",
+        help = "The average pixel width of the random sections"
+    ).int()
+        .restrictTo(1..Int.MAX_VALUE)
+        .default(400)
 
     private val intervalFunction by option(
         "-i",
@@ -66,6 +74,7 @@ object PixelSorter : CliktCommand(
     ).groupChoice(
         IntervalFunction.Lightness.choice,
         IntervalFunction.Random.choice,
+        IntervalFunction.RandomFile.choice,
         IntervalFunction.None.choice,
     ).defaultByName(name = IntervalFunction.Lightness.name)
 
@@ -81,7 +90,7 @@ object PixelSorter : CliktCommand(
     ).defaultByName(name = SortingFunction.HSL.Lightness.name)
 
     private val outputFiletype by option(
-        "-f",
+        "-e",
         "--output-filetype",
         help = "(default: ${Filetype.Jpg.name})",
     ).groupChoice(
@@ -134,7 +143,6 @@ object PixelSorter : CliktCommand(
 private fun ImmutableImage.columns() =
     (0 until width).map { x -> (0 until height).asSequence().map { y -> pixel(x, y) } }
 
-@ExperimentalTime
 fun main(args: Array<String>) = PixelSorter.main(args)
 
 class PixelSequenceSorter(
@@ -180,4 +188,4 @@ fun ImmutableImage.rotateClockwise(degrees: Double): ImmutableImage {
     return ImmutableImage.wrapAwt(target, metadata)
 }
 
-private fun File.immutableImage() = ImmutableImage.loader().fromFile(this)
+internal fun File.immutableImage() = ImmutableImage.loader().fromFile(this)
