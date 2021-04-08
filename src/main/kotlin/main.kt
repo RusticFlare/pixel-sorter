@@ -101,6 +101,7 @@ object PixelSorter : CliktCommand(
         help = "(default: ${Pattern.Lines.name})",
     ).groupChoice(
         Pattern.Lines.choice,
+        Pattern.Circles.choice,
     ).defaultByName(name = Pattern.Lines.name)
 
     internal val finalIntervalFunction by lazy { mask(intervalFunction) }
