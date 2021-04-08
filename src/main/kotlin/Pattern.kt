@@ -9,6 +9,8 @@ import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
 import kotlinx.coroutines.*
 import java.awt.geom.Point2D.distance
+import java.lang.Math.toDegrees
+import kotlin.math.atan2
 import kotlin.math.roundToInt
 import kotlin.time.measureTimedValue
 
@@ -175,22 +177,9 @@ internal fun ImmutableImage.circlePoints(xCenter: Int, yCenter: Int, radius: Int
         circlePoints(xCenter, yCenter, x, y)
     }
 
-    fun Pair<Int, Int>.x(): Int = first - xCenter
-    fun Pair<Int, Int>.y(): Int = second - yCenter
+    fun Pair<Int, Int>.x(): Double = first.toDouble() - xCenter
+    fun Pair<Int, Int>.y(): Double = second.toDouble() - yCenter
 
-    fun Pair<Int, Int>.quadrant() = if (x() >= 0 && y() >= 0) {
-        1
-    } else if (x() >= 0 && y() < 0) {
-        0
-    } else if (x() < 0 && second < 0) {
-        2
-    } else {
-        3
-    }
-    return circle.sortedWith(
-        compareBy<Pair<Int, Int>> { it.quadrant() }
-            .thenComparingInt { if (it.x() >= 0) it.y() else -it.y() }
-            .thenComparingInt { if (it.y() > 0) -it.x() else it.x() }
-    )
+    return circle.sortedBy { (toDegrees(atan2(it.y(), it.x())) - 270 - PixelSorter.angle).rem(360) }
 }
 
