@@ -1,12 +1,17 @@
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.pair
+import com.github.ajalt.clikt.parameters.types.int
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlin.math.sqrt
+import java.awt.geom.Point2D.distance
+import kotlin.math.roundToInt
 import kotlin.time.measureTimedValue
 
 internal sealed class Pattern : OptionGroup() {
@@ -42,25 +47,38 @@ internal sealed class Pattern : OptionGroup() {
 
     internal object Circles : Pattern() {
 
+        private val center by option(
+            "-c",
+            "--center",
+            help = "The center of circle pattern",
+        ).int().pair().default(value = 0 to 0)
+
+        private val ImmutableImage.xCenter: Int
+            get() = ((width / 2) + center.first)
+
+        private val ImmutableImage.yCenter: Int
+            get() = ((height / 2) - center.second)
+
+        private fun ImmutableImage.corners() = sequenceOf(0 to 0, 0 to height, width to 0, width to height)
+
+        private fun ImmutableImage.distanceToCenter(b: Pair<Int, Int>) =
+            distance(xCenter.toDouble(), yCenter.toDouble(), b.first.toDouble(), b.second.toDouble())
+
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
-            val radii = 0..sqrt((input.width / 2).squared() + (input.height / 2).squared()).toInt()
-            val circles = radii
+            (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
                 .map {
                     GlobalScope.async {
-                        input.sortedCircle(xCenter = input.width / 2, yCenter = input.height / 2, radius = it)
+                        input.sortedCircle(radius = it)
                             .forEach { (point, color) -> input.setColor(point.first, point.second, color) }
                     }
                 }.awaitAll()
-
             return input
         }
 
         private fun ImmutableImage.sortedCircle(
-            xCenter: Int,
-            yCenter: Int,
             radius: Int,
         ): List<Pair<Pair<Int, Int>, RGBColor>> {
-            val circlePoints = circlePoints2(xCenter, yCenter, radius)
+            val circlePoints = circlePoints(xCenter, yCenter, radius)
             val colors = circlePoints.asSequence().map { (x, y) -> pixel(x, y) }.sortPixels()
             return circlePoints.zip(colors)
         }
@@ -75,44 +93,7 @@ internal suspend fun Pattern.sortTimed(input: ImmutableImage): ImmutableImage {
     return timedValue.value
 }
 
-private fun ImmutableImage.circlePoints(
-    xCenter: Int,
-    yCenter: Int,
-    radius: Int,
-) = sequence {
-
-    val xRange = 0 until width
-    val yRange = 0 until height
-
-    val r2: Int = radius * radius
-    var y: Int
-    var x: Int = -radius
-
-    while (x <= radius) {
-        val xPoint = xCenter + x
-        if (xPoint in xRange) {
-            y = (sqrt((r2 - x * x).toDouble()) + 0.5).toInt()
-            val yPoint = yCenter + y
-            if (yPoint in yRange) {
-                yield(xPoint to yPoint)
-            }
-        }
-        x++
-    }
-    while (x >= -radius) {
-        val xPoint = xCenter + x
-        if (xPoint in xRange) {
-            y = (sqrt((r2 - x * x).toDouble()) + 0.5).toInt()
-            val yPoint = yCenter - y
-            if (yPoint in yRange) {
-                yield(xPoint to yPoint)
-            }
-        }
-        x--
-    }
-}.toList()
-
-fun ImmutableImage.circlePoints2(xCenter: Int, yCenter: Int, radius: Int): List<Pair<Int, Int>> {
+internal fun ImmutableImage.circlePoints(xCenter: Int, yCenter: Int, radius: Int): List<Pair<Int, Int>> {
 
     val xRange = 0 until width
     val yRange = 0 until height
@@ -126,25 +107,29 @@ fun ImmutableImage.circlePoints2(xCenter: Int, yCenter: Int, radius: Int): List<
     }
 
     fun circlePoints(cx: Int, cy: Int, x: Int, y: Int) {
-        if (x == 0) {
-            point(cx, cy + y)
-            point(cx, cy - y)
-            point(cx + y, cy)
-            point(cx - y, cy)
-        } else if (x == y) {
-            point(cx + x, cy + y)
-            point(cx - x, cy + y)
-            point(cx + x, cy - y)
-            point(cx - x, cy - y)
-        } else if (x < y) {
-            point(cx + x, cy + y)
-            point(cx - x, cy + y)
-            point(cx + x, cy - y)
-            point(cx - x, cy - y)
-            point(cx + y, cy + x)
-            point(cx - y, cy + x)
-            point(cx + y, cy - x)
-            point(cx - y, cy - x)
+        when {
+            x == 0 -> {
+                point(cx, cy + y)
+                point(cx, cy - y)
+                point(cx + y, cy)
+                point(cx - y, cy)
+            }
+            x == y -> {
+                point(cx + x, cy + y)
+                point(cx - x, cy + y)
+                point(cx + x, cy - y)
+                point(cx - x, cy - y)
+            }
+            x < y -> {
+                point(cx + x, cy + y)
+                point(cx - x, cy + y)
+                point(cx + x, cy - y)
+                point(cx - x, cy - y)
+                point(cx + y, cy + x)
+                point(cx - y, cy + x)
+                point(cx + y, cy - x)
+                point(cx - y, cy - x)
+            }
         }
     }
 
