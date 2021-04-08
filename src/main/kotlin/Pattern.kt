@@ -10,7 +10,6 @@ import com.sksamuel.scrimage.pixels.Pixel
 import kotlinx.coroutines.*
 import java.awt.geom.Point2D.distance
 import kotlin.math.roundToInt
-import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
 internal sealed class Pattern : OptionGroup() {
@@ -64,26 +63,20 @@ internal sealed class Pattern : OptionGroup() {
             distance(xCenter.toDouble(), yCenter.toDouble(), b.first.toDouble(), b.second.toDouble())
 
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
-            val timedWritten = measureTimedValue { Array(input.width) { BooleanArray(input.height) } }
-            TermUi.echo("Unwritten: ${timedWritten.duration}")
-            val written = timedWritten.value
+            val written = Array(input.width) { BooleanArray(input.height) }
 
-            val initial = measureTime {
-                (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
-                    .map {
-                        GlobalScope.launch {
-                            input.sortedCircle(radius = it)
-                                .onEach { (point, color) -> input.setColor(point.first, point.second, color) }
-                                .map { (point) -> GlobalScope.launch { written[point.first][point.second] = true } }
-                                .joinAll()
-                        }
-                    }.joinAll()
-            }
-            TermUi.echo("Initial: $initial")
+            (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
+                .map {
+                    GlobalScope.launch {
+                        input.sortedCircle(radius = it)
+                            .onEach { (point, color) -> input.setColor(point.first, point.second, color) }
+                            .forEach { (point) -> written[point.first][point.second] = true }
+                    }
+                }.joinAll()
 
             val colors = listOf<(RGBColor) -> Int>({ it.red }, { it.green }, { it.blue })
 
-            suspend fun Pair<Int, Int>.colourOfNeighbors(): RGBColor {
+            fun Pair<Int, Int>.colourOfNeighbors(): RGBColor {
                 val (x, y) = this
                 val neighbors = sequenceOf(
                     x - 1 to y - 1, x to y - 1, x + 1 to y - 1,
@@ -94,8 +87,7 @@ internal sealed class Pattern : OptionGroup() {
                     .filter { written[it.first][it.second] }
                     .map { input.color(it.first, it.second) }
 
-                val (red, green, blue) = colors.map { GlobalScope.async { neighbors.map(it).average().toInt() } }
-                    .awaitAll()
+                val (red, green, blue) = colors.map { neighbors.map(it).average().toInt() }
 
                 return RGBColor(red, green, blue)
             }
