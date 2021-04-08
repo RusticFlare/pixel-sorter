@@ -15,9 +15,6 @@ import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.Colors
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
@@ -78,7 +75,7 @@ object PixelSorter : CliktCommand(
         IntervalFunction.None.choice,
     ).defaultByName(name = IntervalFunction.Lightness.name)
 
-    private val sortingFunction by option(
+    internal val sortingFunction by option(
         "-s",
         "--sorting-function",
         help = "(default: ${SortingFunction.HSL.Lightness.name})",
@@ -98,36 +95,25 @@ object PixelSorter : CliktCommand(
         Filetype.Png.choice,
     ).defaultByName(name = Filetype.Jpg.name)
 
-    private val finalIntervalFunction by lazy { mask(intervalFunction) }
+    private val pattern by option(
+        "-p",
+        "--pattern",
+        help = "(default: ${Pattern.Lines.name})",
+    ).groupChoice(
+        Pattern.Lines.choice,
+    ).defaultByName(name = Pattern.Lines.name)
+
+    internal val finalIntervalFunction by lazy { mask(intervalFunction) }
 
     override fun run() = runBlocking {
         val input = inputPath.immutableImage()
-        val output = input.rotateAntiClockwise(degrees = angle)
-
-        echo(message = "Sorting pixels")
-        val sortTimeMillis = measureTime { output.sortPixels() }
-        echo(message = "Sorted pixels in $sortTimeMillis")
+        val output = pattern.sortTimed(input)
 
         echo(message = "Saving image")
-        val saveDuration = measureTime {
-            output.rotateClockwise(degrees = angle)
-                .resizeTo(input.width - 2, input.height - 2)
-                .save()
-        }
+        val saveDuration = measureTime { output.save() }
         echo(message = "Saved in $saveDuration")
         echo(message = "Buy me a coffee @ $KO_FI")
     }
-
-    private suspend fun ImmutableImage.sortPixels() {
-        val colors = columns()
-            .map { GlobalScope.async { it.sortPixels().map { it.awt() } } }
-            .awaitAll()
-
-        mapInPlace { colors[it.x][it.y] }
-    }
-
-    private fun Sequence<Pixel>.sortPixels() =
-        fold(PixelSequenceSorter(finalIntervalFunction, sortingFunction), PixelSequenceSorter::insert).colors
 
     private fun ImmutableImage.save(): File? {
         val filename = "$outputFilename.${outputFiletype.extension}"
@@ -140,7 +126,7 @@ object PixelSorter : CliktCommand(
         ?: intervalFunction
 }
 
-private fun ImmutableImage.columns() =
+internal fun ImmutableImage.columns() =
     (0 until width).map { x -> (0 until height).asSequence().map { y -> pixel(x, y) } }
 
 fun main(args: Array<String>) = PixelSorter.main(args)
