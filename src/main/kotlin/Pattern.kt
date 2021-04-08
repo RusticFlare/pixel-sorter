@@ -23,7 +23,7 @@ internal sealed class Pattern : OptionGroup() {
         get() = name to this
 
     fun Sequence<Pixel>.sortPixels() = fold(
-        initial = PixelSequenceSorter(PixelSorter.finalIntervalFunction, PixelSorter.sortingFunction),
+        initial = PixelSequenceSorter(PixelSorter.finalIntervalFunction, PixelSorter.finalSortingFunction),
         operation = PixelSequenceSorter::insert
     ).colors
 

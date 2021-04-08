@@ -28,4 +28,7 @@ sealed class SortingFunction(comparator: Comparator<RGBColor>) : OptionGroup() {
 
         object Intensity : RGB({ red + green + blue })
     }
+
+    internal class Reverse(sortingFunction: SortingFunction) :
+        SortingFunction(sortingFunction.comparator)
 }
