@@ -7,11 +7,10 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.*
 import java.awt.geom.Point2D.distance
 import kotlin.math.roundToInt
+import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
 internal sealed class Pattern : OptionGroup() {
@@ -65,13 +64,49 @@ internal sealed class Pattern : OptionGroup() {
             distance(xCenter.toDouble(), yCenter.toDouble(), b.first.toDouble(), b.second.toDouble())
 
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
-            (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
-                .map {
-                    GlobalScope.async {
-                        input.sortedCircle(radius = it)
-                            .forEach { (point, color) -> input.setColor(point.first, point.second, color) }
-                    }
-                }.awaitAll()
+            val timedWritten = measureTimedValue { Array(input.width) { BooleanArray(input.height) } }
+            TermUi.echo("Unwritten: ${timedWritten.duration}")
+            val written = timedWritten.value
+
+            val initial = measureTime {
+                (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
+                    .map {
+                        GlobalScope.launch {
+                            input.sortedCircle(radius = it)
+                                .onEach { (point, color) -> input.setColor(point.first, point.second, color) }
+                                .map { (point) -> GlobalScope.launch { written[point.first][point.second] = true } }
+                                .joinAll()
+                        }
+                    }.joinAll()
+            }
+            TermUi.echo("Initial: $initial")
+
+            val colors = listOf<(RGBColor) -> Int>({ it.red }, { it.green }, { it.blue })
+
+            suspend fun Pair<Int, Int>.colourOfNeighbors(): RGBColor {
+                val (x, y) = this
+                val neighbors = sequenceOf(
+                    x - 1 to y - 1, x to y - 1, x + 1 to y - 1,
+                    x - 1 to y, x + 1 to y,
+                    x - 1 to y + 1, x to y + 1, x + 1 to y + 1,
+                ).filter { it.first in written.indices }
+                    .filter { it.second in written[it.first].indices }
+                    .filter { written[it.first][it.second] }
+                    .map { input.color(it.first, it.second) }
+
+                val (red, green, blue) = colors.map { GlobalScope.async { neighbors.map(it).average().toInt() } }
+                    .awaitAll()
+
+                return RGBColor(red, green, blue)
+            }
+
+            written.mapIndexed { x, booleans ->
+                GlobalScope.launch {
+                    booleans.withIndex().filterNot { it.value }
+                        .forEach { (y) -> input.setColor(x, y, (x to y).colourOfNeighbors()) }
+                }
+            }.joinAll()
+
             return input
         }
 
