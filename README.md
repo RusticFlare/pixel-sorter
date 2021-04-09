@@ -22,7 +22,7 @@ npm
 - [Install npm](https://www.npmjs.com/get-npm).
 - You are downloading the command line client that lets you install `pixel-sorter` from the npm repository
 
-### Install `pixel-sorter`
+### Install (and Update) `pixel-sorter`
 
 ```shell
 npm i -g @rusticflare/pixel-sorter
@@ -64,6 +64,7 @@ _See [Examples](#examples) for how to use these_
 
 |Option|Argument|Description|Default Value|
 |---|---|---|---|
+|`-p`|[A pattern](#patterns)|The patterns to sort along|`lines`|
 |`-o`|Text|The name of the output file (e.g. `sorted`)|The current date and time|
 |`-m`|File|The path to "mask" file|N/A|
 |`-f`|File|The path to a file to be used by the `randomfile` interval function|N/A|
@@ -74,7 +75,14 @@ _See [Examples](#examples) for how to use these_
 |`-w`|A positive whole number|The average width (in pixels) of the `random[file]` sorted sections (used when the interval function is `random[file]`)|`400`|
 |`-s`|[A sorting function](#sorting-functions)|The sorting function to use|`lightness`|
 |`-e`|[A filetype](#filetypes)|The extension of the filetype to output|`jpg`|
+|`-c`|A pair of integers|The center of the circle when the `circles` pattern is used|`0 0`|
+|`-r`|N/A|Reverse the sorting order|N/A|
 |`-h`|N/A|Print the help message|N/A|
+
+#### Patterns
+
+- `lines`
+- `circles`
 
 #### Interval Functions
 
@@ -132,6 +140,20 @@ pixel-sorter example.jpg -a 315
 
 ![](examples/example-sorted-a-315.jpg)
 
+### Circles 🟣
+
+Sort circles with:
+
+- center `-200 -600` (`0 0` is the center of the image)
+- angle `210` (where the brightest and darkest pixels meet)
+- reversed sort
+
+```shell
+pixel-sorter example.jpg -p circles -c -200 -600 -a 210 -r
+```
+
+![](examples/example-sorted-circles.jpg)
+
 ### Mask & Random 🎭
 
 A "mask" file should be a black and white image (the same size as the sorted image). Only the white sections are
@@ -164,10 +186,4 @@ pixel-sorter example.jpg -i randomfile -f example-randomfile-mask.jpg
 
 ![](examples/example-randomfile.jpg)
 
-## Updating
-
-To update to the latest version
-
-```shell
-npm up -g @rusticflare/pixel-sorter
-```
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5P542WTU)
