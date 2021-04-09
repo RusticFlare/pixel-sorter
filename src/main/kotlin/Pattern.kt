@@ -7,7 +7,9 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
-import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import java.awt.geom.Point2D.distance
 import java.lang.Math.toDegrees
 import kotlin.math.atan2
@@ -34,11 +36,13 @@ internal sealed class Pattern : OptionGroup() {
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
             val output = input.rotateAntiClockwise(degrees = PixelSorter.angle)
 
-            val colors = output.columns()
-                .map { GlobalScope.async { it.sortPixels().map { it.awt() } } }
-                .awaitAll()
-
-            output.mapInPlace { colors[it.x][it.y] }
+            (0 until output.width)
+                .map { x ->
+                    GlobalScope.launch {
+                        output.col(x).asSequence().sortPixels()
+                            .forEachIndexed { y, color -> output.setColor(x, y, color) }
+                    }
+                }.joinAll()
 
             return output.rotateClockwise(degrees = PixelSorter.angle)
                 .resizeTo(input.width - 2, input.height - 2)
