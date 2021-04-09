@@ -36,10 +36,12 @@ internal sealed class Pattern : OptionGroup() {
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
             val output = input.rotateAntiClockwise(degrees = PixelSorter.angle)
 
+            val rows = 0 until output.height
+
             (0 until output.width)
                 .map { x ->
                     GlobalScope.launch {
-                        output.col(x).asSequence().sortPixels()
+                        rows.asSequence().map { y -> output.pixel(x, y) }.sortPixels()
                             .forEachIndexed { y, color -> output.setColor(x, y, color) }
                     }
                 }.joinAll()
