@@ -61,7 +61,10 @@ sealed class IntervalFunction : OptionGroup() {
             help = "A file where the brighter the pixel, the more likely it is to be sorted (use with 'randomfile')"
         ).file(mustExist = true, canBeDir = false).required()
 
-        private val randomImage by lazy { randomFile.immutableImage().rotateAntiClockwise(PixelSorter.angle) }
+        private val randomImage by lazy {
+            randomFile.immutableImage()
+                .let { if (PixelSorter.pattern is Pattern.Lines) it.rotateAntiClockwise(PixelSorter.angle) else it }
+        }
 
         override fun shouldBeSorted(pixel: Pixel) = when (val grey = randomImage.getGrey(pixel.x, pixel.y)) {
             0 -> false

@@ -96,7 +96,7 @@ object PixelSorter : CliktCommand(
         Filetype.Png.choice,
     ).defaultByName(name = Filetype.Jpg.name)
 
-    private val pattern by option(
+    internal val pattern by option(
         "-p",
         "--pattern",
         help = "(default: ${Pattern.Lines.name})",
@@ -133,13 +133,11 @@ object PixelSorter : CliktCommand(
         return output(outputFiletype.writer, inputPath.resolveSibling(relative = filename))
     }
 
-    private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()?.rotateAntiClockwise(angle)
+    private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()
+        ?.let { if (pattern is Pattern.Lines) it.rotateAntiClockwise(angle) else it }
         ?.let { IntervalFunction.Mask(intervalFunction, it) }
         ?: intervalFunction
 }
-
-internal fun ImmutableImage.columns() =
-    (0 until width).map { x -> (0 until height).asSequence().map { y -> pixel(x, y) } }
 
 fun main(args: Array<String>) = PixelSorter.main(args)
 
