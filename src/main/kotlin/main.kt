@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.groups.defaultByName
 import com.github.ajalt.clikt.parameters.groups.groupChoice
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.file
@@ -75,7 +76,7 @@ object PixelSorter : CliktCommand(
         IntervalFunction.None.choice,
     ).defaultByName(name = IntervalFunction.Lightness.name)
 
-    internal val sortingFunction by option(
+    private val sortingFunction by option(
         "-s",
         "--sorting-function",
         help = "(default: ${SortingFunction.HSL.Lightness.name})",
@@ -101,9 +102,20 @@ object PixelSorter : CliktCommand(
         help = "(default: ${Pattern.Lines.name})",
     ).groupChoice(
         Pattern.Lines.choice,
+        Pattern.Circles.choice,
     ).defaultByName(name = Pattern.Lines.name)
 
+    private val reverse by option(
+        "-r",
+        "--reverse",
+        help = "Reverse the sort"
+    ).flag()
+
     internal val finalIntervalFunction by lazy { mask(intervalFunction) }
+
+    internal val finalSortingFunction by lazy {
+        if (reverse) SortingFunction.Reverse(sortingFunction) else sortingFunction
+    }
 
     override fun run() = runBlocking {
         val input = inputPath.immutableImage()
