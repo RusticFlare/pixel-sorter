@@ -1,3 +1,6 @@
+import Pattern.Lines
+import PixelSorter.angle
+import PixelSorter.pattern
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -63,7 +66,7 @@ sealed class IntervalFunction : OptionGroup() {
 
         private val randomImage by lazy {
             randomFile.immutableImage()
-                .let { if (PixelSorter.pattern is Pattern.Lines) it.rotateAntiClockwise(PixelSorter.angle) else it }
+                .let { if (pattern is Lines) it.rotateAntiClockwise(angle ?: 0.0) else it }
         }
 
         override fun shouldBeSorted(pixel: Pixel) = when (val grey = randomImage.getGrey(pixel.x, pixel.y)) {

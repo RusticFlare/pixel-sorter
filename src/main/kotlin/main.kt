@@ -55,7 +55,6 @@ object PixelSorter : CliktCommand(
     internal val angle by option("-a", "--angle", help = "Between 0 and 360")
         .double()
         .restrictTo(range = 0.0..360.0)
-        .default(value = 0.0)
 
     internal val averageWidth by option(
         "-w",
@@ -134,7 +133,7 @@ object PixelSorter : CliktCommand(
     }
 
     private fun mask(intervalFunction: IntervalFunction) = maskPath?.immutableImage()
-        ?.let { if (pattern is Pattern.Lines) it.rotateAntiClockwise(angle) else it }
+        ?.let { if (pattern is Pattern.Lines) it.rotateAntiClockwise(angle ?: 0.0) else it }
         ?.let { IntervalFunction.Mask(intervalFunction, it) }
         ?: intervalFunction
 }

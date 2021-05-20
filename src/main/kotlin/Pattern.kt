@@ -14,6 +14,7 @@ import java.awt.geom.Point2D.distance
 import java.lang.Math.toDegrees
 import kotlin.math.atan2
 import kotlin.math.roundToInt
+import kotlin.random.Random
 import kotlin.time.measureTimedValue
 
 internal sealed class Pattern : OptionGroup() {
@@ -34,7 +35,7 @@ internal sealed class Pattern : OptionGroup() {
     internal object Lines : Pattern() {
 
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
-            val output = input.rotateAntiClockwise(degrees = PixelSorter.angle)
+            val output = input.rotateAntiClockwise(degrees = PixelSorter.angle ?: 0.0)
 
             val rows = 0 until output.height
 
@@ -46,7 +47,7 @@ internal sealed class Pattern : OptionGroup() {
                     }
                 }.joinAll()
 
-            return output.rotateClockwise(degrees = PixelSorter.angle)
+            return output.rotateClockwise(degrees = PixelSorter.angle ?: 0.0)
                 .resizeTo(input.width - 2, input.height - 2)
         }
     }
@@ -186,6 +187,7 @@ internal fun ImmutableImage.circlePoints(xCenter: Int, yCenter: Int, radius: Int
     fun Pair<Int, Int>.x(): Double = first.toDouble() - xCenter
     fun Pair<Int, Int>.y(): Double = second.toDouble() - yCenter
 
-    return circle.sortedBy { (toDegrees(atan2(it.y(), it.x())) - 270 - PixelSorter.angle).rem(360) }
+    val angle = PixelSorter.angle ?: Random.nextDouble(until = 360.0)
+    return circle.sortedBy { (toDegrees(atan2(it.y(), it.x())) - 270 - angle).rem(360) }
 }
 
