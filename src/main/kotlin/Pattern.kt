@@ -7,12 +7,12 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.color.RGBColor
 import com.sksamuel.scrimage.pixels.Pixel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.awt.geom.Point2D.distance
 import java.lang.Math.toDegrees
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.measureTimedValue
@@ -20,7 +20,7 @@ import kotlin.time.measureTimedValue
 internal sealed class Pattern : OptionGroup() {
 
     val name: String
-        get() = this::class.simpleName!!.toLowerCase()
+        get() = this::class.simpleName!!.lowercase()
 
     val choice: Pair<String, Pattern>
         get() = name to this
@@ -39,13 +39,15 @@ internal sealed class Pattern : OptionGroup() {
 
             val rows = 0 until output.height
 
-            (0 until output.width)
-                .map { x ->
-                    GlobalScope.launch {
-                        rows.asSequence().map { y -> output.pixel(x, y) }.sortPixels()
-                            .forEachIndexed { y, color -> output.setColor(x, y, color) }
+            coroutineScope {
+                (0 until output.width)
+                    .forEach { x ->
+                        launch {
+                            rows.asSequence().map { y -> output.pixel(x, y) }.sortPixels()
+                                .forEachIndexed { y, color -> output.setColor(x, y, color) }
+                        }
                     }
-                }.joinAll()
+            }
 
             return output.rotateClockwise(degrees = PixelSorter.angle ?: 0.0)
                 .resizeTo(input.width - 2, input.height - 2)
@@ -74,14 +76,15 @@ internal sealed class Pattern : OptionGroup() {
         override suspend fun sort(input: ImmutableImage): ImmutableImage {
             val written = Array(input.width) { BooleanArray(input.height) }
 
-            (0..input.corners().map { input.distanceToCenter(it) }.maxOrNull()!!.roundToInt())
-                .map {
-                    GlobalScope.launch {
+            coroutineScope {
+                (0..ceil(input.corners().maxOf { input.distanceToCenter(it) }).roundToInt()).forEach {
+                    launch {
                         input.sortedCircle(radius = it)
                             .onEach { (point, color) -> input.setColor(point.first, point.second, color) }
                             .forEach { (point) -> written[point.first][point.second] = true }
                     }
-                }.joinAll()
+                }
+            }
 
             val colors = listOf<(RGBColor) -> Int>({ it.red }, { it.green }, { it.blue })
 
@@ -101,12 +104,14 @@ internal sealed class Pattern : OptionGroup() {
                 return RGBColor(red, green, blue)
             }
 
-            written.mapIndexed { x, booleans ->
-                GlobalScope.launch {
-                    booleans.withIndex().filterNot { it.value }
-                        .forEach { (y) -> input.setColor(x, y, (x to y).colourOfNeighbors()) }
+            coroutineScope {
+                written.forEachIndexed { x, booleans ->
+                    launch {
+                        booleans.withIndex().filterNot { it.value }
+                            .forEach { (y) -> input.setColor(x, y, (x to y).colourOfNeighbors()) }
+                    }
                 }
-            }.joinAll()
+            }
 
             return input
         }

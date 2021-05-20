@@ -9,7 +9,7 @@ sealed class Filetype(
 ) : OptionGroup() {
 
     val name: String
-        get() = this::class.simpleName!!.toLowerCase()
+        get() = this::class.simpleName!!.lowercase()
 
     val choice: Pair<String, Filetype>
         get() = name to this

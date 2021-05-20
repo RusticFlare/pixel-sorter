@@ -8,7 +8,7 @@ sealed class SortingFunction(comparator: Comparator<RGBColor>) : OptionGroup() {
     val comparator: Comparator<RGBColor> = comparator.reversed()
 
     val name: String
-        get() = this::class.simpleName!!.toLowerCase()
+        get() = this::class.simpleName!!.lowercase()
 
     val choice: Pair<String, SortingFunction>
         get() = name to this

@@ -17,7 +17,7 @@ import kotlin.random.Random
 sealed class IntervalFunction : OptionGroup() {
 
     val name: String
-        get() = this::class.simpleName!!.toLowerCase()
+        get() = this::class.simpleName!!.lowercase()
 
     val choice: Pair<String, IntervalFunction>
         get() = name to this
