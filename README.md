@@ -28,6 +28,16 @@ npm
 npm i -g @rusticflare/pixel-sorter
 ```
 
+### Distro Packages
+
+#### AUR (Arch Linux)
+
+`pixel-sorter` can be installed from the [AUR](https://aur.archlinux.org/packages/pixel-sorter) using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). e.g.
+
+```shell
+paru -S pixel-sorter
+```
+
 ## Usage
 
 ### Pixel Sort Your First Image
